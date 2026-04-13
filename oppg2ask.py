@@ -83,8 +83,8 @@ def calc_boundary_normmetals(v_left,v_right):
     eq13 = omg_right + np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_R, -gm_right)
     eq14 = omg_right_t + np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_R_t, -gm_right_t)
 
-    eq15 = omg_left + np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_L, -gm_left)
-    eq16 = omg_left_t + np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_L_t, -gm_left_t)
+    eq15 = omg_left - np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_L, -gm_left)
+    eq16 = omg_left_t - np.einsum('ij,jk,kl', 1/(zeta*eps) * np.identity(2), N_L_t, -gm_left_t)
 
     final_v = flatten_matrices(eq13, eq14, eq15, eq16)
     return final_v
