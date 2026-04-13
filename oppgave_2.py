@@ -31,7 +31,7 @@ def SplitVectors(vec):
 
     return (vectors[0], vectors[1], vectors[2], vectors[3])
 
-"""
+
 
 mat1 = np.array(((1,2),(3,4))) + np.array(((5,6),(7,8)))*1j
 mat2 = mat1 + np.ones((2,2))*(10+10j)
@@ -48,6 +48,5 @@ print("split 2x2matrix", VecMat1)
 print("marged R8 vector", R8VectorToC2x2Matrix(VecMat1))
 
 print("merged Vectors", MergeVectors(VecMat1,VecMat2,VecMat3,VecMat4))
-print("split merged matrix", SplitVectors(MergeVectors(VecMat1,VecMat2,VecMat3,VecMat4)))
+#print("split merged matrix", SplitVectors(MergeVectors(VecMat1,VecMat2,VecMat3,VecMat4)))
 
-"""
