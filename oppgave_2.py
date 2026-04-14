@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-from numba import jit
+from tqdm import tqdm
 
 
 
@@ -141,7 +141,7 @@ def oppgave_2g(prb : SolveTools):
 def CalculateGreensFunctions(sol):
     greens = np.zeros((sol.shape[1], 4, 4), dtype = np.complex128)
 
-    for i in range(sol.shape[0]):
+    for i in range(sol.shape[1]):
         gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(sol[:,i])
 
         N = SolveTools.CalculateN(gamma, gammaThilde)
@@ -153,15 +153,15 @@ def CalculateGreensFunctions(sol):
         bottomRight = -2*NThilde + np.identity(2)
 
         greens[i] = np.concatenate ((np.concatenate((topLeft ,topRight), axis=1), np.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
+
     return greens
 
 
 def CalculateDensityOfStates(greensFunctions): #greensfunctions is assumed to be (m x 4 x 4) tensor
     roHat3 = np.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
-    print(greensFunctions.shape)
     D = np.zeros(greensFunctions.shape[0])
     for i in range(greensFunctions.shape[0]):
-        D[i] = np.real(np.trace(roHat3 @ greensFunctions[i])) / 4
+        D[i] = np.real(np.einsum("ii",roHat3 @ greensFunctions[i])) / 4
     return D
 
 
@@ -226,11 +226,83 @@ def oppgave_2j():
     return sol
 
 
+#oppgave k
+
+"""Helper funtions"""
+#h
+def CalculateGreensFunction(sol):
+    greens = np.zeros(( 4, 4), dtype = np.complex128)
+
+    gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(sol)
+
+    N = SolveTools.CalculateN(gamma, gammaThilde)
+    NThilde = SolveTools.CalculateNthilde(gamma, gammaThilde)
+
+    topLeft = 2*N - np.identity(2)
+    topRight = 2*N @ gamma
+    bottomLeft = -2*NThilde @ gammaThilde
+    bottomRight = -2*NThilde + np.identity(2)
+
+    greens = np.concatenate ((np.concatenate((topLeft ,topRight), axis=1), np.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
+
+    return greens
+"""END helperfuntions"""
+
+def oppgave_2k():
+
+    epsilon = np.linspace(2,0,101)
+    lengths = np.array((0.5,1,2))
+    
+    epsN = 101
+
+    DOS = np.zeros(epsN)
+    greensFunctions = np.zeros((epsN, 4, 4), dtype = np.complex128)
+    xm = 101
+
+    fig = plt.figure()
+
+
+    y = np.zeros((32,xm))
+    j = 1
+    for l in lengths:
+        x = np.linspace(0,l,xm)
+        i = 0
+        for eps in tqdm(epsilon):
+            problem = SolveTools()
+            problem.delta = 0.01
+            problem.zeta = 3
+            problem.dimlessLength = l
+            problem.dimlessEnergy = eps
+
+            setRiccatiToTask2i(problem)
+
+            sol = sp.integrate.solve_bvp(problem.CalculateMdimDelxVecLOOP, problem.calculateBoundaryConditions, x, y, max_nodes = xm)
+            y = sol["y"]
+            solAtX_2 = sol["y"][:, ((xm+1)//2)]
+            greensFunctions[i] = CalculateGreensFunction(solAtX_2)
+            i += 1
+
+        ax = fig.add_subplot(1,3,j)
+        ax.grid()
+        ax.set_title(r"$l =$" + str(float(l)))
+        ax.set_xlabel("Energy")
+        ax.set_ylabel("DOS")
+
+        DOS = CalculateDensityOfStates(greensFunctions)
+
+        ax.plot(epsilon, DOS)
+        j += 1
+    
+    fig.suptitle(r"DOS at $x = \frac{l}{2}$")
+    
+
+    fig.tight_layout()
+    fig.savefig("./output/default_oppg_k.png")
+    fig.show()
+
 
 def oppgave_2():
-    oppgave_2h(SolveTools())
-
-
+    oppgave_2k()
 
 if __name__ == "__main__":
     oppgave_2()
