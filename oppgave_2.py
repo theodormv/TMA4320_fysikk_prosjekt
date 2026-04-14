@@ -65,24 +65,24 @@ class SolveTools:
 
     #oppgave d
     def CalculateN(gamma, gammaThilde):
-        return (np.identity(2) - gamma @ gammaThilde)**(-1)
+        return np.linalg.inv(np.identity(2) - gamma @ gammaThilde)
     
 
     def CalculateNthilde(gamma, gammaThilde):
-        return (np.identity(2) - gammaThilde @ gamma)**(-1)
+        return np.linalg.inv(np.identity(2) - gammaThilde @ gamma)
     
 
     def CalculateDelxVec(self, vec, dimlessEnergy):
-        gamma, gammaThilde, omega, omgeaThilde = ConvertVectorToMatrices(vec)
+        gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(vec)
 
         delGamma = omega
-        delGammaThilde = omgeaThilde
+        delGammaThilde = omegaThilde
 
         N = SolveTools.CalculateN(gamma, gammaThilde)
         Nthilde = SolveTools.CalculateNthilde(gamma, gammaThilde)
 
         delOmega = -2j*(dimlessEnergy + self.delta*1j)*gamma - 2*omega @ Nthilde @ gammaThilde @ omega
-        delOmegaThilde = -2j*(dimlessEnergy + self.delta*1j)*gammaThilde - 2*omgeaThilde @ N @ gamma @ omgeaThilde
+        delOmegaThilde = -2j*(dimlessEnergy + self.delta*1j)*gammaThilde - 2*omegaThilde @ N @ gamma @ omegaThilde
 
         return ConvertMatricesToVector(delGamma, delGammaThilde, delOmega, delOmegaThilde)
 
@@ -119,12 +119,12 @@ class SolveTools:
 def oppgave_2g(prb : SolveTools):
     prb.delta = 0.01
     prb.zeta = 3
-    prb.dimlessEnergy = 0
+    prb.dimlessEnergy = 1
     prb.dimlessLength = 1
 
     m = 101
     x = np.linspace(0, prb.dimlessLength, m)
-    y = np.ones((32,m))*1e-12
+    y = np.zeros((32,m))
 
     sols = []
 
@@ -132,13 +132,14 @@ def oppgave_2g(prb : SolveTools):
         prb.dimlessEnergy = en
         sol = sp.integrate.solve_bvp(prb.CalculateMdimDelxVecLOOP, prb.calculateBoundaryConditions, x, y)
         sols.append(sol)
+        print(sol)
 
     return sols
 
 
 #h
 def CalculateGreensFunctions(sol):
-    greens = np.zeros((sol.shape[1], 4, 4))
+    greens = np.zeros((sol.shape[1], 4, 4), dtype = np.complex128)
 
     for i in range(sol.shape[0]):
         gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(sol[:,i])
@@ -171,8 +172,9 @@ def oppgave_2h(prb : SolveTools):
     fig = plt.figure()
 
     for i in range(len(sols)):
-
-        density = CalculateDensityOfStates( CalculateGreensFunctions(sols[i]["y"]) )
+        greens = CalculateGreensFunctions(sols[i]["y"])
+        print(greens[20])
+        density = CalculateDensityOfStates( greens )
         ax = fig.add_subplot(1,3,i+1)
         ax.plot(x, density)
         ax.grid()
@@ -212,8 +214,7 @@ def oppgave_2j():
 
     m = 101
     x = np.linspace(0, problem.dimlessLength, m)
-    y = np.ones((32,m))
-
+    y = np.zeros((32,m))
 
     sol = sp.integrate.solve_bvp(problem.CalculateMdimDelxVecLOOP, problem.calculateBoundaryConditions, x, y)
     greensFunctions = CalculateGreensFunctions(sol["y"])
@@ -227,7 +228,7 @@ def oppgave_2j():
 
 
 def oppgave_2():
-    oppgave_2j()
+    oppgave_2h(SolveTools())
 
 
 
