@@ -115,7 +115,7 @@ def calc_boundary_superconduct_metals(v_left,v_right):
     gm_left, gm_left_t, omg_left, omg_left_t = pack_matrices(v_left)
     gm_right, gm_right_t, omg_right, omg_right_t = pack_matrices(v_right)
 
-    mat_gamma_left, mat_gamma_t_left, mat_gamma_right, mat_gamma_t_right = fetch_nonzero_riccati(eps, delta)
+    mat_gamma_left, mat_gamma_t_left, mat_gamma_right, mat_gamma_t_right = fetch_nonzero_riccati(phiL, phiR)
 
     N_L = calc_N(gm_left, gm_left_t)
     N_L_t = calc_N_t(gm_left, gm_left_t)
@@ -237,14 +237,9 @@ def calc_dgreen(sol):
     return dgreens
 
 
-def oppgave_2l():
-    
-    epsilon = [2, 1.5, 1, 0.5, 0]
-    lengths = np.array([1])
-    
-    epsN = 101
+def calculate_currents(lengths, epsilon, phiLeft, phiRight):
+    epsN = len(epsilon)
 
-    DOS = np.zeros(epsN)
     greensFunctions = np.zeros((epsN, 4, 4), dtype = np.complex128)
     dgreensFunctions = np.zeros((epsN, 4, 4), dtype= np.complex128)
     current = np.zeros(epsN, dtype=np.float64)
@@ -254,38 +249,77 @@ def oppgave_2l():
 
 
     y = np.zeros((32,xm))
+    global phiR
+    global phiL
     global l
-    for l in lengths:
-        x = np.linspace(0,l,xm)
-        i = 0
-        global eps
-        global m
-        for eps in tqdm(epsilon):
-            global delta
-            global zeta
-            
-            zeta = 3
-            delta = 0.01
-            l = 1
-            m = 101
+    phiR = phiRight
+    for phiL in phiLeft:
+        for l in lengths:
+            x = np.linspace(0,l,xm)
+            i = 0
+            global eps
+            global m
+            for eps in tqdm(epsilon):
+                global delta
+                global zeta
+                
+                zeta = 3
+                delta = 0.01
+                l = 1
+                m = 101
 
 
-            sol = sp.integrate.solve_bvp(calc_dvec, calc_boundary_superconduct_metals, x, y, max_nodes = xm)
-            y = sol["y"]
-            solAtX_2 = sol["y"][:, ((xm+1)//2)]
-            for k in range(np.shape(y)[1]):
-                greensFunctions[k] = CalculateGreensFunction(solAtX_2)
-                dgreensFunctions[k] = calc_dgreen(solAtX_2)
-                current[k] = np.real(np.einsum('ij, ji ->',  roHat3, greensFunctions[k] @ dgreensFunctions[i] - dgreensFunctions[k] @ greensFunctions[k]))
-            current_plot_vals.append(current)
-            
-            i += 1
+                sol = sp.integrate.solve_bvp(calc_dvec, calc_boundary_superconduct_metals, x, y, max_nodes = xm)
+                y = sol["y"]
+                solAtX_2 = sol["y"][:, ((xm+1)//2)]
+                for k in range(np.shape(y)[1]):
+                    greensFunctions[k] = CalculateGreensFunction(solAtX_2)
+                    dgreensFunctions[k] = calc_dgreen(solAtX_2)
+                    current[k] = np.real(np.einsum('ij, ji ->',  roHat3, greensFunctions[k] @ dgreensFunctions[i] - dgreensFunctions[k] @ greensFunctions[k]))
+                current_plot_vals.append(current)
+                
+                i += 1
 
+    return x, current_plot_vals
+
+
+def oppgave_2l():
+    epsilon = [2, 1.5, 1, 0.5, 0]
+    lengths = [1]
+    x, current_plot_vals = calculate_currents(lengths, epsilon)
     for (idx, current) in enumerate(current_plot_vals):
         plt.plot(x, current, label=f'$\\varepsilon = {epsilon[idx]}$')
     
     plt.legend()
     plt.savefig("./output/oppg2l.png")
 
+def oppgave_2m():
+    phiLeft = [1]
+    phiRight = 0
+    epsilon = np.linspace(2,0,101)
+    lengths = np.array((0.5,1,2))
 
-oppgave_2l()
+    x, current_plot_vals = calculate_currents(lengths, epsilon, phiLeft, phiRight)
+    for (idx, current) in enumerate(current_plot_vals):
+        plt.plot(x, current, label=f'$\\varepsilon = {epsilon[idx]}$')
+    
+    plt.legend()
+    plt.savefig("./output/oppg2m.png")
+
+oppgave_2m()
+
+def oppgave_2n():
+    phiLeft = np.arange(0, np.pi, step=np.pi/8)
+    phiLeft = [np.pi/8]
+    phiRight = 0
+    epsilon = np.linspace(2,0,101)
+    lengths = np.array([1])
+
+    x, current_plot_vals = calculate_currents(lengths, epsilon, phiLeft, phiRight)
+    for (idx, current) in enumerate(current_plot_vals):
+        plt.plot(x, current, label=f'$\\varepsilon = {epsilon[idx]}$')
+    
+    plt.legend()
+    plt.savefig("./output/oppg2n.png")
+
+oppgave_2n()
