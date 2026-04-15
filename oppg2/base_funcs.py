@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 jax.config.update('jax_enable_x64', True)
 
-
+#2a
 @jax.jit
 def C2x2MatrixToR8Vector(matrix):
     real = jnp.real(matrix)
@@ -19,6 +19,7 @@ def R8VectorToC2x2Matrix(vec):
 
     return matrix
 
+#2b
 @jax.jit
 def MergeVectors(m1, m2, m3, m4):
     tmp_arr = jnp.concat([m1,m2,m3,m4])
@@ -28,6 +29,7 @@ def MergeVectors(m1, m2, m3, m4):
 def SplitVectors(m1):
     return m1.reshape(4, 8)
 
+
 @jax.jit
 def flatten_matrices(gm, gm_h, omg, omg_h):
     matrix_list = [gm, gm_h, omg, omg_h]
@@ -35,12 +37,14 @@ def flatten_matrices(gm, gm_h, omg, omg_h):
     v = MergeVectors(real_vectors[0], real_vectors[1], real_vectors[2], real_vectors[3])
     return v
 
+#2c
 @jax.jit
 def pack_matrices(v):
     real_vectors = SplitVectors(v)
     gm, gm_h, omg, omg_h = [R8VectorToC2x2Matrix(x) for x in real_vectors]
     return gm, gm_h, omg, omg_h
 
+#2d
 @jax.jit
 def calc_N(gm, gm_t):
     N = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gm, gm_t))
@@ -51,8 +55,6 @@ def calc_N_t(gm, gm_t):
     N_t = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gm_t, gm))
     return N_t
 
-
-#2d
 @jax.jit
 def calc_dv(v, eps, delta):
     gm, gm_t, omg, omg_t = pack_matrices(v)
