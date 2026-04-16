@@ -11,7 +11,7 @@ def C2x2MatrixToR8Vector(matrix):
     real = jnp.real(matrix)
     imag = jnp.imag(matrix)
 
-    return jnp.concat([real, imag]).flatten()
+    return jnp.concat([real, imag]).reshape(8, -1)
 
 @jax.jit
 def R8VectorToC2x2Matrix(vec):
@@ -33,18 +33,33 @@ def SplitVectors(m1):
 
 @jax.jit
 def flatten_matrices(gm, gm_h, omg, omg_h):
-    matrix_list = [gm, gm_h, omg, omg_h]
-    real_vectors = [C2x2MatrixToR8Vector(m) for m in matrix_list]
+    matrix_list = jnp.array([gm, gm_h, omg, omg_h])
+    #real_vectors = [C2x2MatrixToR8Vector(m) for m in matrix_list]
+    real_vectors = jax.vmap(C2x2MatrixToR8Vector)(matrix_list)
     v = MergeVectors(real_vectors[0], real_vectors[1], real_vectors[2], real_vectors[3])
     return v
 
-#2c
 @jax.jit
+def flatten_matrices_fast(matrix_list):
+    complete_matrix = jnp.stack(matrix_list, axis=0)
+    real_part = jnp.real(complete_matrix)
+    imaginary_part = jnp.imag(complete_matrix)
+
+    real_transform = jnp.stack([real_part, imaginary_part], axis=1).reshape(32)
+    return real_transform
+
+#2c
+'''@jax.jit
 def pack_matrices(v):
     real_vectors = SplitVectors(v)
-    gm, gm_h, omg, omg_h = [R8VectorToC2x2Matrix(x) for x in real_vectors]
+    gm, gm_h, omg, omg_h = jax.vmap(R8VectorToC2x2Matrix)(real_vectors)
     return gm, gm_h, omg, omg_h
+'''
+@jax.jit
+def pack_matrices(v):
+    imag_real_split = v.reshape(-1, 2, 2, 2)
 
+    return imag_real_split[:, 0] + imag_real_split[:, 1]*1j
 #2d
 @jax.jit
 def calc_N(gm, gm_t):
@@ -69,13 +84,13 @@ def calc_dv(v, eps, delta):
     domg = -2j * (eps + 1j*delta) * gm - 2* jnp.einsum('ij,jk,kl,lm', omg, N_t, gm_t, omg)
     domg_t = -2j * (eps + 1j*delta) * gm_t - 2* jnp.einsum('ij,jk,kl,lm', omg_t, N, gm, omg_t)
 
-    dv = flatten_matrices(dgm, dgm_t, domg, domg_t)
+    dv = flatten_matrices_fast([dgm, dgm_t, domg, domg_t])
     return dv
 
 #2e
 @jax.jit
 def calc_dvec(x: jnp.array, vec : jnp.array, eps, delta):
-    m = jnp.size(x)
+    '''m = jnp.size(x)
     for i in range(m):
         vi = vec[:, i]
         dvi = calc_dv(vi, eps, delta).reshape(-1,1)
@@ -83,6 +98,9 @@ def calc_dvec(x: jnp.array, vec : jnp.array, eps, delta):
             dvec = dvi
         else:
             dvec = jnp.concat([dvec, dvi], axis=1)
+
+    '''
+    dvec = jax.vmap(calc_dv, in_axes=(1, None, None), out_axes=1)(vec, eps, delta)
     return dvec
 
 #2f
@@ -104,7 +122,7 @@ def calc_boundary_normmetals(v_left,v_right, zeta, l):
     eq15 = omg_left - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_L, -gm_left)
     eq16 = omg_left_t - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_L_t, -gm_left_t)
 
-    final_v = flatten_matrices(eq13, eq14, eq15, eq16)
+    final_v = flatten_matrices_fast([eq13, eq14, eq15, eq16])
     return final_v
 
 @jax.jit
@@ -147,7 +165,7 @@ def calc_boundary_superconduct_metals(v_left,v_right, eps, delta, zeta, l, phiL,
     eq15 = omg_right - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right @ mat_gamma_right), N_R, mat_gamma_right -gm_right)
     eq16 = omg_right_t - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right_t @ mat_gamma_right), N_R_t, mat_gamma_t_right -gm_right_t)
 
-    final_v = flatten_matrices(eq13, eq14, eq15, eq16)
+    final_v = flatten_matrices_fast([eq13, eq14, eq15, eq16])
     return final_v
 
 @jax.jit

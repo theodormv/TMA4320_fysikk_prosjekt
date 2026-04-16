@@ -312,6 +312,7 @@ def CalculateCurrentIntegrand(greens):
 
 
 def oppgave_2l():
+    pass
     
 
 
