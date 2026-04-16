@@ -75,14 +75,7 @@ def calc_dv(v, eps, delta):
 #2e
 @jax.jit
 def calc_dvec(x: jnp.array, vec : jnp.array, eps, delta):
-    m = jnp.size(x)
-    for i in range(m):
-        vi = vec[:, i]
-        dvi = calc_dv(vi, eps, delta).reshape(-1,1)
-        if i == 0:
-            dvec = dvi
-        else:
-            dvec = jnp.concat([dvec, dvi], axis=1)
+    dvec = jax.vmap(calc_dv, in_axes=(1, None, None), out_axes=1)(vec, eps, delta)
     return dvec
 
 #2f
@@ -136,15 +129,15 @@ def calc_boundary_superconduct_metals(v_left,v_right, eps, delta, zeta, l, phiL,
     mat_gamma_left, mat_gamma_t_left, mat_gamma_right, mat_gamma_t_right = fetch_nonzero_riccati(eps, delta, phiL, phiR)
 
     N_L = calc_N(mat_gamma_left, mat_gamma_t_left)
-    N_L_t = calc_N_t(mat_gamma_t_left, mat_gamma_left)
+    N_L_t = calc_N_t(mat_gamma_left, mat_gamma_t_left)
 
     N_R = calc_N(mat_gamma_right, mat_gamma_t_right)
-    N_R_t = calc_N_t(mat_gamma_t_right, mat_gamma_right)
+    N_R_t = calc_N_t(mat_gamma_right, mat_gamma_t_right)
 
-    eq13 = omg_left + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_left @ mat_gamma_left), N_L, mat_gamma_left -gm_left)
+    eq13 = omg_left + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_left @ mat_gamma_t_left), N_L, mat_gamma_left -gm_left)
     eq14 = omg_left_t + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_left_t @ mat_gamma_left), N_L_t, mat_gamma_t_left -gm_left_t)
 
-    eq15 = omg_right - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right @ mat_gamma_right), N_R, mat_gamma_right -gm_right)
+    eq15 = omg_right - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right @ mat_gamma_t_right), N_R, mat_gamma_right -gm_right)
     eq16 = omg_right_t - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right_t @ mat_gamma_right), N_R_t, mat_gamma_t_right -gm_right_t)
 
     final_v = flatten_matrices(eq13, eq14, eq15, eq16)
@@ -163,15 +156,13 @@ def CalculateGreensFunction(sol):
     bottomLeft = -2*NTilde @ gammaTilde
     bottomRight = -2*NTilde + jnp.identity(2)
 
-    greens = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
-
+    #greens = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
+    greens = jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
     return greens
 
 
 @jax.jit
 def calc_dgreen(sol):
-    greens = jnp.zeros(( 4, 4), dtype = jnp.complex128)
-
     gamma, gammaTilde, omega, omegaTilde = pack_matrices(sol)
 
     N = calc_N(gamma, gammaTilde)
@@ -185,7 +176,8 @@ def calc_dgreen(sol):
     bottomLeft = -NTilde @ omegaTilde - dNTilde @ gammaTilde
     bottomRight = -dNTilde
 
-    dgreens = 2* jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
+    dgreens = jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
+    #dgreens = 2* jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     return dgreens
 
 @jax.jit
@@ -205,6 +197,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
     roHat3 = jnp.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
     xm = epsN
     x = jnp.linspace(0,l,xm)
+    y = jnp.zeros((32,xm))
 
     phiR = phiRight
     for phiL in phiLeft:
@@ -217,7 +210,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                                        phiL=phiL, phiR=phiR)
                 
                 
-                y = jnp.zeros((32,xm))
+                
                 sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm, tol=1E-6)
                 y = sol["y"]
 
@@ -231,7 +224,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                     currents.append(jax.vmap(find_current_single_point, in_axes=(0,0))(greensFunctions, dgreensFunctions))
                     #print(f'All currents has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}.')
                 else:
-                    y_singlePoint = sol["y"][:, ((xm+1)//2)]  # X = l/2
+                    y_singlePoint = sol["y"][:, (xm//2)]  # X = l/2
                     greensFunction = CalculateGreensFunction(y_singlePoint)
                     dgreensFunction = calc_dgreen(y_singlePoint)
                     currents.append(find_current_single_point(greensFunction, dgreensFunction))
