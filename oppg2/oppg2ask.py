@@ -59,6 +59,7 @@ def oppgave_2j():
     density = jax.vmap(CalculateDensityOfState)(greensFunctions).squeeze(axis=-1)
     plt.plot(x, density)
     plt.grid()
+    plt.xlabel("")
     plt.title("Density of states for superconductors interfacing normal metal")
     plt.savefig("./output/2j.png")
 
@@ -69,8 +70,7 @@ def oppgave_2k():
     lengths = jnp.array((0.5,1,2))
     delta = 0.01
     zeta = 3
-    phiL = [0] # Må være liste fordi programmet støtter iterering gjennom flere verdier
-    phiR = 0
+    phiL = phiR = 0
     xm = 101
 
     '''    fig = plt.figure()
@@ -171,4 +171,4 @@ def oppgave_2n():
     plt.grid()
     plt.savefig("./output/2n.png")
 
-oppgave_2l()
+oppgave_2k()

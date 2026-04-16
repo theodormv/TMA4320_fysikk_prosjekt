@@ -209,6 +209,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
     phiR = phiRight
     for phiL in phiLeft:
         for l in lengths:
+            print(f"Length: {l} | phi: {phiL}")
             for eps in tqdm(epsilon):
                 partial_dvec = partial(calc_dvec, eps=eps, delta=delta)
                 partial_boundary = partial(calc_boundary_superconduct_metals, 
