@@ -4,8 +4,8 @@ from tqdm import tqdm
 
 #2g
 def oppg_2g():
-    epsilon = jnp.array([0,1,2])
-    lengths = [1]
+    epsilon = jnp.array([2,1,0])
+    lengths = l = 1
     delta = 0.01
     zeta = 3
     xm = 101
@@ -13,17 +13,16 @@ def oppg_2g():
     densities = list()
 
     y = jnp.zeros((32,xm))
-    for l in lengths:
-        x = jnp.linspace(0,l,xm)
-        for eps in tqdm(epsilon):
-            
-            partial_dvec = partial(calc_dvec, eps=eps, delta=delta)
-            partial_boundary = partial(calc_boundary_normmetals, zeta=zeta, l=l)
+    x = jnp.linspace(0,l,xm)
+    for eps in tqdm(epsilon):
+        
+        partial_dvec = partial(calc_dvec, eps=eps, delta=delta)
+        partial_boundary = partial(calc_boundary_normmetals, zeta=zeta, l=l)
 
-            sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm)
-            y = sol["y"]
-            greensFunctions = (jax.vmap(CalculateGreensFunction, in_axes=1)(y))
-            densities.append(jax.vmap(CalculateDensityOfState)(greensFunctions).flatten())
+        sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm)
+        y = sol["y"]
+        greensFunctions = jax.vmap(CalculateGreensFunction, in_axes=1)(y)
+        densities.append(jax.vmap(CalculateDensityOfState)(greensFunctions).flatten())
 
     return x, densities
 
@@ -35,6 +34,8 @@ def oppgave_2h():
     
     plt.grid()
     plt.legend()
+    plt.xlabel("Position")
+    plt.ylabel("DOS")
     plt.title("Density of states for interfacing normal metals")
     plt.savefig("./output/2h.png")
 
@@ -69,8 +70,8 @@ def oppgave_2k():
     lengths = jnp.array((0.5,1,2))
     delta = 0.01
     zeta = 3
-    epsN = 101
-    phiL = phiR = 0
+    phiL = [0] # Må være liste fordi programmet støtter iterering gjennom flere verdier
+    phiR = 0
     xm = 101
 
     '''    fig = plt.figure()
@@ -87,13 +88,12 @@ def oppgave_2k():
 
     fig.tight_layout()
     fig.savefig("./output/2k.png")
-    fig.show()
+    fig.show()DOS at $x = \frac{l}{2}$
     '''
 
 
     y = jnp.zeros((32,xm))
     for l in lengths:
-        DOS = jnp.zeros(epsN)
         greensFunctions = list()
         x = jnp.linspace(0,l,xm)
         for eps in tqdm(epsilon):
@@ -125,14 +125,23 @@ def oppgave_2k():
 
 
 def oppgave_2l():
-    epsilon = [2, 1.5, 1, 0.5, 0]
+    epsilon_for_calculation = jnp.linspace(2,0,101)
+    epsilon_for_plotting = jnp.array([2, 1.5, 1, 0.5, 0])
+    plot_indices = jnp.isin(epsilon_for_calculation, epsilon_for_plotting)
     lengths = [1]
-    x, current_plot_vals = calculate_currents(lengths, epsilon)
+    phiLeft = [0] # Må være liste fordi programmet støtter iterering gjennom flere verdier
+    phiRight = 0
+    x, current = calculate_currents(lengths, epsilon_for_calculation, phiLeft, phiRight, all_positions=True)
+    current_plot_vals = current[plot_indices]
     for (idx, current) in enumerate(current_plot_vals):
-        plt.plot(x, current, label=f'$\\varepsilon = {epsilon[idx]}$')
+        plt.plot(x, current, label=f'$\\varepsilon = {epsilon_for_plotting[idx]}$')
     
+    plt.grid()
+    plt.title("Current integrand $j(x,\\varepsilon)$")
+    plt.xlabel("Position")
+    plt.ylabel("$j$")
     plt.legend()
-    plt.savefig("./output/oppg2l.png")
+    plt.savefig("./output/2l.png")
 
 def oppgave_2m():
     phiLeft = [1]
@@ -141,20 +150,26 @@ def oppgave_2m():
     lengths = jnp.array([1])
 
     x, current_plot_vals = calculate_currents(lengths, epsilon, phiLeft, phiRight)
-    plt.plot(x, current_plot_vals)
+    plt.plot(epsilon, current_plot_vals)
     
-    plt.legend()
-    plt.savefig("./output/oppg2m.png")
+    plt.grid()
+    plt.title("Current integrand $j(\\frac{l}{2}, \\varepsilon)$")
+    plt.xlabel("Dimensionless energy $\\varepsilon$")
+    plt.ylabel("$j$")
+    plt.savefig("./output/2m.png")
 
 def oppgave_2n():
-    phiLeft = jnp.arange(0, jnp.pi, step=jnp.pi/8)
+    phiLeft = jnp.linspace(0, jnp.pi, 33)
     phiRight = 0
-    epsilon = jnp.linspace(0,2,101)
+    epsilon = jnp.linspace(2,0,101)
     lengths = jnp.array([1])
 
     Integrals = integerate_currents(lengths, epsilon, phiLeft, phiRight)
-    plt.plot(phiLeft, Integrals, label=f"$\\phi_{{L}} = {phiRight}$")
-    plt.legend()
-    plt.show()
+    plt.plot(phiLeft, Integrals)
+    plt.xlabel("$\\Delta\\phi$")
+    plt.ylabel("Current $I$")
+    plt.titel("Current with varying phase difference")
+    plt.grid()
+    plt.savefig("./output/2n.png")
 
-oppgave_2k()
+oppgave_2n()

@@ -167,23 +167,6 @@ def CalculateGreensFunction(sol):
     return greens
 
 
-'''def CalculateGreensFunctions(sol):
-    greens = jnp.zeros((sol.shape[1], 4, 4), dtype = jnp.complex128)
-
-    for i in range(sol.shape[1]):
-        gamma, gammaThilde, omega, omegaThilde = pack_matrices(sol[:,i])
-
-        N = calc_N(gamma, gammaThilde)
-        NThilde = calc_N_t(gamma, gammaThilde)
-
-        topLeft = 2*N - jnp.identity(2)
-        topRight = 2*N @ gamma
-        bottomLeft = -2*NThilde @ gammaThilde
-        bottomRight = -2*NThilde + jnp.identity(2)
-
-        greens[i] = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
-
-    return greens'''
 @jax.jit
 def calc_dgreen(sol):
     greens = jnp.zeros(( 4, 4), dtype = jnp.complex128)
@@ -203,20 +186,6 @@ def calc_dgreen(sol):
 
     dgreens = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     return dgreens
-
-@jax.jit
-def CalculateDensityOfStates(greensFunctions): #greensfunctions is assumed to be (m x 4 x 4) tensor
-    roHat3 = jnp.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
-    D = jnp.zeros(greensFunctions.shape[0])
-    for i in range(greensFunctions.shape[0]):
-        temporary_density = jnp.real(jnp.einsum("ii",roHat3 @ greensFunctions[i])) / 4
-        temporary_density = temporary_density.reshape(-1, 1)
-        if i == 0:
-            D = temporary_density
-        else:
-            D = jnp.concat([D, temporary_density], axis=1)
-    return D
-
 
 @jax.jit
 def CalculateDensityOfState(greensFunction): 
@@ -260,11 +229,11 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                     currents.append(jax.vmap(find_current_single_point, in_axes=(0,0))(greensFunctions, dgreensFunctions))
                     print(f'All currents has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}.')
                 else:
-                    y_singlePoint = sol["y"][:, ((xm+1)//2)]  # X = X_max/2
+                    y_singlePoint = sol["y"][:, ((xm+1)//2)]  # X = l/2
                     greensFunction = CalculateGreensFunction(y_singlePoint)
                     dgreensFunction = calc_dgreen(y_singlePoint)
                     currents.append(find_current_single_point(greensFunction, dgreensFunction))
-                    print(f"Current at x/2 has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}")           
+                    print(f"Current at x=l/2 has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}")           
                 
     return x, jnp.array(currents)
 
