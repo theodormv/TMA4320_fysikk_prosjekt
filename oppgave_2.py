@@ -41,8 +41,8 @@ def SplitVectors(vec):
 
 
 #oppgave c
-def ConvertMatricesToVector(gamma, gammaThilde, omega, omegaThilde):
-    return MergeVectors(C2x2MatrixToR8Vector(gamma), C2x2MatrixToR8Vector(gammaThilde), C2x2MatrixToR8Vector(omega), C2x2MatrixToR8Vector(omegaThilde))
+def ConvertMatricesToVector(gamma, gammaTilde, omega, omegaTilde):
+    return MergeVectors(C2x2MatrixToR8Vector(gamma), C2x2MatrixToR8Vector(gammaTilde), C2x2MatrixToR8Vector(omega), C2x2MatrixToR8Vector(omegaTilde))
 
 
 def ConvertVectorToMatrices(vec):
@@ -58,33 +58,33 @@ class SolveTools:
     dimlessLength = 0
 
     MaterialGammaLeft = np.zeros((2,2), dtype=np.complex128)
-    MaterialGammaThildeLeft = np.zeros((2,2), dtype=np.complex128)
+    MaterialGammaTildeLeft = np.zeros((2,2), dtype=np.complex128)
     MaterialGammaRight = np.zeros((2,2), dtype=np.complex128)
-    MaterialGammaThildeRight = np.zeros((2,2), dtype=np.complex128)
+    MaterialGammaTildeRight = np.zeros((2,2), dtype=np.complex128)
 
 
     #oppgave d
-    def CalculateN(gamma, gammaThilde):
-        return np.linalg.inv(np.identity(2) - gamma @ gammaThilde)
+    def CalculateN(gamma, gammaTilde):
+        return np.linalg.inv(np.identity(2) - gamma @ gammaTilde)
     
 
-    def CalculateNthilde(gamma, gammaThilde):
-        return np.linalg.inv(np.identity(2) - gammaThilde @ gamma)
+    def CalculateNTilde(gamma, gammaTilde):
+        return np.linalg.inv(np.identity(2) - gammaTilde @ gamma)
     
 
     def CalculateDelxVec(self, vec, dimlessEnergy):
-        gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(vec)
+        gamma, gammaTilde, omega, omegaTilde = ConvertVectorToMatrices(vec)
 
         delGamma = omega
-        delGammaThilde = omegaThilde
+        delGammaTilde = omegaTilde
 
-        N = SolveTools.CalculateN(gamma, gammaThilde)
-        Nthilde = SolveTools.CalculateNthilde(gamma, gammaThilde)
+        N = SolveTools.CalculateN(gamma, gammaTilde)
+        NTilde = SolveTools.CalculateNTilde(gamma, gammaTilde)
 
-        delOmega = -2j*(dimlessEnergy + self.delta*1j)*gamma - 2*omega @ Nthilde @ gammaThilde @ omega
-        delOmegaThilde = -2j*(dimlessEnergy + self.delta*1j)*gammaThilde - 2*omegaThilde @ N @ gamma @ omegaThilde
+        delOmega = -2j*(dimlessEnergy + self.delta*1j)*gamma - 2*omega @ NTilde @ gammaTilde @ omega
+        delOmegaTilde = -2j*(dimlessEnergy + self.delta*1j)*gammaTilde - 2*omegaTilde @ N @ gamma @ omegaTilde
 
-        return ConvertMatricesToVector(delGamma, delGammaThilde, delOmega, delOmegaThilde)
+        return ConvertMatricesToVector(delGamma, delGammaTilde, delOmega, delOmegaTilde)
 
 
     #e
@@ -99,21 +99,21 @@ class SolveTools:
 
     #f
     def calculateBoundaryConditions(self, leftVec, rightVec):
-        gammaLeft, gammaThildeLeft, omegaLeft, omegaThildeLeft = ConvertVectorToMatrices(leftVec)
-        gammaRight, gammaThildeRight, omegaRight, omegaThildeRight = ConvertVectorToMatrices(rightVec)
+        gammaLeft, gammaTildeLeft, omegaLeft, omegaTildeLeft = ConvertVectorToMatrices(leftVec)
+        gammaRight, gammaTildeRight, omegaRight, omegaTildeRight = ConvertVectorToMatrices(rightVec)
 
-        NL = SolveTools.CalculateN(self.MaterialGammaLeft, self.MaterialGammaThildeLeft)
-        NLThilde = SolveTools.CalculateNthilde(self.MaterialGammaLeft, self.MaterialGammaThildeLeft)
-        NR = SolveTools.CalculateN(self.MaterialGammaRight, self.MaterialGammaThildeRight)
-        NRThilde = SolveTools.CalculateNthilde(self.MaterialGammaRight, self.MaterialGammaThildeRight)
+        NL = SolveTools.CalculateN(self.MaterialGammaLeft, self.MaterialGammaTildeLeft)
+        NLTilde = SolveTools.CalculateNTilde(self.MaterialGammaLeft, self.MaterialGammaTildeLeft)
+        NR = SolveTools.CalculateN(self.MaterialGammaRight, self.MaterialGammaTildeRight)
+        NRTilde = SolveTools.CalculateNTilde(self.MaterialGammaRight, self.MaterialGammaTildeRight)
 
-        boundaryOmegaLeft = omegaLeft + 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaLeft @ self.MaterialGammaThildeLeft) @ NL @ (self.MaterialGammaLeft - gammaLeft)
-        boundaryOmegaThildeLeft = omegaThildeLeft + 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaThildeLeft @ self.MaterialGammaLeft) @ NLThilde @ (self.MaterialGammaThildeLeft - gammaThildeLeft)
+        boundaryOmegaLeft = omegaLeft + 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaLeft @ self.MaterialGammaTildeLeft) @ NL @ (self.MaterialGammaLeft - gammaLeft)
+        boundaryOmegaTildeLeft = omegaTildeLeft + 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaTildeLeft @ self.MaterialGammaLeft) @ NLTilde @ (self.MaterialGammaTildeLeft - gammaTildeLeft)
 
-        boundaryOmegaRight = omegaRight - 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaRight @ self.MaterialGammaThildeRight) @ NR @ (self.MaterialGammaRight - gammaRight)
-        boundaryOmegaThildeRight = omegaThildeRight - 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaThildeRight @ self.MaterialGammaRight) @ NRThilde @ (self.MaterialGammaThildeRight - gammaThildeRight)
+        boundaryOmegaRight = omegaRight - 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaRight @ self.MaterialGammaTildeRight) @ NR @ (self.MaterialGammaRight - gammaRight)
+        boundaryOmegaTildeRight = omegaTildeRight - 1/(self.zeta*self.dimlessLength) * (np.identity(2) - gammaTildeRight @ self.MaterialGammaRight) @ NRTilde @ (self.MaterialGammaTildeRight - gammaTildeRight)
 
-        return ConvertMatricesToVector(boundaryOmegaLeft, boundaryOmegaThildeLeft, boundaryOmegaRight, boundaryOmegaThildeRight)
+        return ConvertMatricesToVector(boundaryOmegaLeft, boundaryOmegaTildeLeft, boundaryOmegaRight, boundaryOmegaTildeRight)
 
 #g
 def oppgave_2g(prb : SolveTools):
@@ -132,8 +132,6 @@ def oppgave_2g(prb : SolveTools):
         prb.dimlessEnergy = en
         sol = sp.integrate.solve_bvp(prb.CalculateMdimDelxVecLOOP, prb.calculateBoundaryConditions, x, y)
         sols.append(sol)
-        print(sol)
-
     return sols
 
 
@@ -142,15 +140,15 @@ def CalculateGreensFunctions(sol):
     greens = np.zeros((sol.shape[1], 4, 4), dtype = np.complex128)
 
     for i in range(sol.shape[1]):
-        gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(sol[:,i])
+        gamma, gammaTilde, omega, omegaTilde = ConvertVectorToMatrices(sol[:,i])
 
-        N = SolveTools.CalculateN(gamma, gammaThilde)
-        NThilde = SolveTools.CalculateNthilde(gamma, gammaThilde)
+        N = SolveTools.CalculateN(gamma, gammaTilde)
+        NTilde = SolveTools.CalculateNTilde(gamma, gammaTilde)
 
         topLeft = 2*N - np.identity(2)
         topRight = 2*N @ gamma
-        bottomLeft = -2*NThilde @ gammaThilde
-        bottomRight = -2*NThilde + np.identity(2)
+        bottomLeft = -2*NTilde @ gammaTilde
+        bottomRight = -2*NTilde + np.identity(2)
 
         greens[i] = np.concatenate ((np.concatenate((topLeft ,topRight), axis=1), np.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
 
@@ -161,7 +159,7 @@ def CalculateDensityOfStates(greensFunctions): #greensfunctions is assumed to be
     roHat3 = np.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
     D = np.zeros(greensFunctions.shape[0])
     for i in range(greensFunctions.shape[0]):
-        D[i] = np.real(np.einsum("ii",roHat3 @ greensFunctions[i])) / 4
+        D[i] = np.real(np.einsum("ii", roHat3 @ greensFunctions[i])) / 4
     return D
 
 
@@ -171,15 +169,17 @@ def oppgave_2h(prb : SolveTools):
     
     fig = plt.figure()
 
+    ax = fig.add_subplot(1,1,1)
+    ax.grid()
+    styles = ["-", "--", "-."]
+
     for i in range(len(sols)):
         greens = CalculateGreensFunctions(sols[i]["y"])
-        print(greens[20])
         density = CalculateDensityOfStates( greens )
-        ax = fig.add_subplot(1,3,i+1)
-        ax.plot(x, density)
-        ax.grid()
-        fig.savefig("./output/default.png")
-    
+        ax.plot(x, density, styles[i], label=r"$\epsilon = $" + str(i) )
+    ax.legend()
+    fig.savefig("./output/default_oppg_h.png")
+
     fig.show()
         
 
@@ -195,10 +195,10 @@ def setRiccatiToTask2i(prb : SolveTools, phaseL = 0, phaseR = 0):
     minusElement = np.sinh(nuMinus(prb))/(1+np.cosh(nuMinus(prb)))
 
     prb.MaterialGammaLeft = np.array(((0, plussElement),(minusElement, 0)))*np.exp(phaseL*1j)
-    prb.MaterialGammaThildeLeft = np.array(((0, minusElement),(plussElement, 0)))*np.exp(-phaseL*1j)
+    prb.MaterialGammaTildeLeft = np.array(((0, minusElement),(plussElement, 0)))*np.exp(-phaseL*1j)
 
     prb.MaterialGammaRight = np.array(((0, plussElement),(minusElement, 0)))*np.exp(phaseR*1j)
-    prb.MaterialGammaThildeRight = np.array(((0, minusElement),(plussElement, 0)))*np.exp(-phaseR*1j)
+    prb.MaterialGammaTildeRight = np.array(((0, minusElement),(plussElement, 0)))*np.exp(-phaseR*1j)
 
 
 #oppgave j
@@ -221,6 +221,7 @@ def oppgave_2j():
     density = CalculateDensityOfStates(greensFunctions)
     plt.plot(x, density)
     plt.grid()
+    plt.savefig("./output/default_oppg_j.png")
     plt.show()
 
     return sol
@@ -233,15 +234,15 @@ def oppgave_2j():
 def CalculateGreensFunction(sol):
     greens = np.zeros(( 4, 4), dtype = np.complex128)
 
-    gamma, gammaThilde, omega, omegaThilde = ConvertVectorToMatrices(sol)
+    gamma, gammaTilde, omega, omegaTilde = ConvertVectorToMatrices(sol)
 
-    N = SolveTools.CalculateN(gamma, gammaThilde)
-    NThilde = SolveTools.CalculateNthilde(gamma, gammaThilde)
+    N = SolveTools.CalculateN(gamma, gammaTilde)
+    NTilde = SolveTools.CalculateNTilde(gamma, gammaTilde)
 
     topLeft = 2*N - np.identity(2)
     topRight = 2*N @ gamma
-    bottomLeft = -2*NThilde @ gammaThilde
-    bottomRight = -2*NThilde + np.identity(2)
+    bottomLeft = -2*NTilde @ gammaTilde
+    bottomRight = -2*NTilde + np.identity(2)
 
     greens = np.concatenate ((np.concatenate((topLeft ,topRight), axis=1), np.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
 
@@ -255,17 +256,23 @@ def oppgave_2k():
     
     epsN = 101
 
-    DOS = np.zeros(epsN)
-    greensFunctions = np.zeros((epsN, 4, 4), dtype = np.complex128)
+
     xm = 101
 
     fig = plt.figure()
 
 
     y = np.zeros((32,xm))
-    j = 1
+    
+    ax = fig.add_subplot(1,1,1)
+    ax.grid()
+    ax.set_xlabel("Energy")
+    ax.set_ylabel("DOS")
+
     for l in lengths:
         x = np.linspace(0,l,xm)
+        DOS = np.zeros(epsN)
+        sols = np.zeros((epsN, 32), dtype = np.complex128)
         i = 0
         for eps in tqdm(epsilon):
             problem = SolveTools()
@@ -279,20 +286,14 @@ def oppgave_2k():
             sol = sp.integrate.solve_bvp(problem.CalculateMdimDelxVecLOOP, problem.calculateBoundaryConditions, x, y, max_nodes = xm)
             y = sol["y"]
             solAtX_2 = sol["y"][:, ((xm+1)//2)]
-            greensFunctions[i] = CalculateGreensFunction(solAtX_2)
+            sols[i] = solAtX_2
             i += 1
 
-        ax = fig.add_subplot(1,3,j)
-        ax.grid()
-        ax.set_title(r"$l =$" + str(float(l)))
-        ax.set_xlabel("Energy")
-        ax.set_ylabel("DOS")
+        DOS = CalculateDensityOfStates( CalculateGreensFunctions(sols) )
 
-        DOS = CalculateDensityOfStates(greensFunctions)
-
-        ax.plot(epsilon, DOS)
-        j += 1
+        ax.plot(epsilon, DOS, label = r"$l =$" + str(float(l)))
     
+    ax.legend()
     fig.suptitle(r"DOS at $x = \frac{l}{2}$")
     
 
@@ -300,9 +301,22 @@ def oppgave_2k():
     fig.savefig("./output/default_oppg_k.png")
     fig.show()
 
+#l
+def Commutator(A,B):
+    return A @ B - B @ A
+
+
+def CalculateCurrentIntegrand(greens):
+    roHat3 = np.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
+    return np.real(np.einsum("ii", roHat3 @ Commutator(greens, ) ))
+
+
+def oppgave_2l():
+    
+
 
 def oppgave_2():
-    oppgave_2k()
+    oppgave_2h(SolveTools())
 
 if __name__ == "__main__":
     oppgave_2()
