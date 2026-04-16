@@ -1,5 +1,6 @@
 import scipy as sp
 from functools import partial
+from tqdm import tqdm
 import jax
 import jax.numpy as jnp
 jax.config.update('jax_enable_x64', True)
@@ -176,15 +177,15 @@ def calc_dgreen(sol):
     N = calc_N(gamma, gammaTilde)
     NTilde = calc_N_t(gamma, gammaTilde)
 
-    dN = jnp.einsum('ij,jk,kl', N, omega @ gammaTilde + gammaTilde @ omega, N)
-    dNTilde = jnp.einsum('ij,jk,kl', NTilde, omegaTilde @ gamma + gamma @ omegaTilde, NTilde)
+    dN = jnp.einsum('ij,jk,kl', N, omega @ gammaTilde + gamma @ omegaTilde, N)
+    dNTilde = jnp.einsum('ij,jk,kl', NTilde, omegaTilde @ gamma + gammaTilde @ omega, NTilde)
 
     topLeft = dN
     topRight = N @ omega + dN @ gamma
-    bottomLeft = 2*NTilde @ omegaTilde - dNTilde @ gammaTilde
+    bottomLeft = -NTilde @ omegaTilde - dNTilde @ gammaTilde
     bottomRight = -dNTilde
 
-    dgreens = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
+    dgreens = 2* jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     return dgreens
 
 @jax.jit
@@ -208,7 +209,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
     phiR = phiRight
     for phiL in phiLeft:
         for l in lengths:
-            for eps in epsilon:
+            for eps in tqdm(epsilon):
                 partial_dvec = partial(calc_dvec, eps=eps, delta=delta)
                 partial_boundary = partial(calc_boundary_superconduct_metals, 
                                        eps=eps, delta=delta, zeta=zeta, l=l,
@@ -216,7 +217,7 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                 
                 
                 y = jnp.zeros((32,xm))
-                sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm)
+                sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm, tol=1E-6)
                 y = sol["y"]
 
                 @jax.jit
@@ -227,13 +228,13 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                     greensFunctions = jax.vmap(CalculateGreensFunction, in_axes=1)(y)
                     dgreensFunctions = jax.vmap(calc_dgreen, in_axes=1)(y)
                     currents.append(jax.vmap(find_current_single_point, in_axes=(0,0))(greensFunctions, dgreensFunctions))
-                    print(f'All currents has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}.')
+                    #print(f'All currents has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}.')
                 else:
                     y_singlePoint = sol["y"][:, ((xm+1)//2)]  # X = l/2
                     greensFunction = CalculateGreensFunction(y_singlePoint)
                     dgreensFunction = calc_dgreen(y_singlePoint)
                     currents.append(find_current_single_point(greensFunction, dgreensFunction))
-                    print(f"Current at x=l/2 has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}")           
+                    #print(f"Current at x=l/2 has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}")           
                 
     return x, jnp.array(currents)
 

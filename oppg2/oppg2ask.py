@@ -1,6 +1,5 @@
 from base_funcs import *
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 #2g
 def oppg_2g():
@@ -167,9 +166,9 @@ def oppgave_2n():
     Integrals = integerate_currents(lengths, epsilon, phiLeft, phiRight)
     plt.plot(phiLeft, Integrals)
     plt.xlabel("$\\Delta\\phi$")
-    plt.ylabel("Current $I$")
-    plt.titel("Current with varying phase difference")
+    plt.ylabel("$I$")
+    plt.title("Current $I$ with varying phase difference")
     plt.grid()
     plt.savefig("./output/2n.png")
 
-oppgave_2n()
+oppgave_2l()
