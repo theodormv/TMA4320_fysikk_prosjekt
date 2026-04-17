@@ -125,6 +125,8 @@ def oppgave_2m():
     phiLeft = [1]
     phiRight = 0
     epsilon = jnp.linspace(2,0,101)
+    epsilon_for_position_plotting = jnp.array([2, 1.5, 1, 0.5, 0])
+    plot_indices = jnp.isin(epsilon, epsilon_for_position_plotting)
     lengths = jnp.array([1])
 
     x, current_plot_vals = calculate_currents(lengths, epsilon, phiLeft, phiRight)
@@ -135,6 +137,23 @@ def oppgave_2m():
     plt.xlabel("Dimensionless energy $\\varepsilon$")
     plt.ylabel("$j$")
     plt.savefig("./output/2m.png")
+
+    plt.clf() 
+
+    # Denne delen plotter integranden som funksjon av posisjon for alle x og fem verdier av epsilon. Ikke strengt tatt spurt av oppgaven,
+    #så kan vurdere å fjerne
+    x, current = calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=True)
+    current_plot_vals = current[plot_indices]
+    for (idx, current) in enumerate(current_plot_vals):
+        plt.plot(x, current, label=f'$\\varepsilon = {epsilon_for_position_plotting[idx]}$')
+    
+    plt.grid()
+    plt.title("Current integrand $j(x,\\varepsilon)$")
+    plt.xlabel("Position")
+    plt.ylabel("$j$")
+    plt.legend()
+    plt.savefig("./output/2m_posisjonsplott.png")
+
 
 def oppgave_2n():
     phiLeft = jnp.linspace(0, jnp.pi, 33)
@@ -149,3 +168,6 @@ def oppgave_2n():
     plt.title("Current $I$ with varying phase difference")
     plt.grid()
     plt.savefig("./output/2n.png")
+
+
+oppgave_2m()
