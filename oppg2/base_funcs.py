@@ -32,72 +32,74 @@ def SplitVectors(m1):
 
 
 @jax.jit
-def flatten_matrices(gm, gm_h, omg, omg_h):
-    matrix_list = [gm, gm_h, omg, omg_h]
+def convert_matrices_to_vector(m1, m2, m3, m4):
+    matrix_list = [m1, m2, m3, m4]
     real_vectors = [C2x2MatrixToR8Vector(m) for m in matrix_list]
     v = MergeVectors(real_vectors[0], real_vectors[1], real_vectors[2], real_vectors[3])
     return v
 
 #2c
 @jax.jit
-def pack_matrices(v):
+def convert_vector_to_matrices(v):
     real_vectors = SplitVectors(v)
-    gm, gm_h, omg, omg_h = [R8VectorToC2x2Matrix(x) for x in real_vectors]
-    return gm, gm_h, omg, omg_h
+    m1, m2, m3, m4 = [R8VectorToC2x2Matrix(x) for x in real_vectors]
+    return m1, m2, m3, m4
 
 #2d
 @jax.jit
-def calc_N(gm, gm_t):
-    N = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gm, gm_t))
+def calc_N(gamma, gamma_tilde):
+    N = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gamma, gamma_tilde))
     return N
 
 @jax.jit
-def calc_N_t(gm, gm_t):
-    N_t = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gm_t, gm))
-    return N_t
+def calc_N_tilde(gamma, gamma_tilde):
+    N_tilde = jnp.linalg.inv(jnp.identity(2) - jnp.einsum('ij, jk', gamma_tilde, gamma))
+    return N_tilde
 
 @jax.jit
 def calc_dv(v, eps, delta):
-    gm, gm_t, omg, omg_t = pack_matrices(v)
+    'Derivert av v-vektoren (32x1)'
+    gamma, gamma_tilde, omega, omega_tilde = convert_vector_to_matrices(v)
 
-    dgm = omg
-    dgm_t = omg_t
+    gamma_derivative = omega
+    gamma_tilde_derivative = omega_tilde
 
-    N = calc_N(gm, gm_t)
-    N_t = calc_N_t(gm, gm_t)
+    N = calc_N(gamma, gamma_tilde)
+    N_tilde = calc_N_tilde(gamma, gamma_tilde)
 
-    domg = -2j * (eps + 1j*delta) * gm - 2* jnp.einsum('ij,jk,kl,lm', omg, N_t, gm_t, omg)
-    domg_t = -2j * (eps + 1j*delta) * gm_t - 2* jnp.einsum('ij,jk,kl,lm', omg_t, N, gm, omg_t)
+    omega_derivative = -2j * (eps + 1j*delta) * gamma - 2* jnp.einsum('ij,jk,kl,lm', omega, N_tilde, gamma_tilde, omega)
+    omega_tilde_derivative = -2j * (eps + 1j*delta) * gamma_tilde - 2* jnp.einsum('ij,jk,kl,lm', omega_tilde, N, gamma, omega_tilde)
 
-    dv = flatten_matrices(dgm, dgm_t, domg, domg_t)
+    dv = convert_matrices_to_vector(gamma_derivative, gamma_tilde_derivative, omega_derivative, omega_tilde_derivative)
     return dv
 
 #2e
 @jax.jit
 def calc_dvec(x: jnp.array, vec : jnp.array, eps, delta):
+    'Derivert av matrise av v-vektorer'
     dvec = jax.vmap(calc_dv, in_axes=(1, None, None), out_axes=1)(vec, eps, delta)
     return dvec
 
 #2f
 @jax.jit
 def calc_boundary_normmetals(v_left,v_right, zeta, l):
-    'Forenklet LHS ettersom alle riccati-matrisene er null'
-    gm_left, gm_left_t, omg_left, omg_left_t = pack_matrices(v_left)
-    gm_right, gm_right_t, omg_right, omg_right_t = pack_matrices(v_right)
+    'Beregning av forenklet grensebetingelser ettersom alle riccati-matrisene er null'
+    gamma_left, gamma_left_tilde, omega_left, omega_left_tilde = convert_vector_to_matrices(v_left)
+    gamma_right, gamma_right_tilde, omega_right, omega_right_tilde = convert_vector_to_matrices(v_right)
 
-    N_L = calc_N(gm_left, gm_left_t)
-    N_L_t = calc_N_t(gm_left, gm_left_t)
+    N_left = calc_N(gamma_left, gamma_left_tilde)
+    N_left_tilde = calc_N_tilde(gamma_left, gamma_left_tilde)
 
-    N_R = calc_N(gm_right, gm_right_t)
-    N_R_t = calc_N_t(gm_right, gm_right_t)
+    N_right = calc_N(gamma_right, gamma_right_tilde)
+    N_right_tilde = calc_N_tilde(gamma_right, gamma_right_tilde)
 
-    eq13 = omg_right + jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_R, -gm_right)
-    eq14 = omg_right_t + jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_R_t, -gm_right_t)
+    eq13 = omega_right + jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_right, -gamma_right)
+    eq14 = omega_right_tilde + jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_right_tilde, -gamma_right_tilde)
 
-    eq15 = omg_left - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_L, -gm_left)
-    eq16 = omg_left_t - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_L_t, -gm_left_t)
+    eq15 = omega_left - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_left, -gamma_left)
+    eq16 = omega_left_tilde - jnp.einsum('ij,jk,kl', 1/(zeta*l) * jnp.identity(2), N_left_tilde, -gamma_left_tilde)
 
-    final_v = flatten_matrices(eq13, eq14, eq15, eq16)
+    final_v = convert_matrices_to_vector(eq13, eq14, eq15, eq16)
     return final_v
 
 @jax.jit
@@ -113,71 +115,70 @@ def fetch_nonzero_riccati(eps, delta, phaseL = 0, phaseR = 0):
     plussElement = jnp.sinh(nuPluss(eps, delta))/(1+jnp.cosh(nuPluss(eps, delta)))
     minusElement = jnp.sinh(nuMinus(eps, delta))/(1+jnp.cosh(nuMinus(eps, delta)))
 
-    MaterialGammaLeft = jnp.array(((0, plussElement),(minusElement, 0)))*jnp.exp(phaseL*1j)
-    MaterialGammaTildeLeft = jnp.array(((0, minusElement),(plussElement, 0)))*jnp.exp(-phaseL*1j)
+    material_gamma_left = jnp.array(((0, plussElement),(minusElement, 0)))*jnp.exp(phaseL*1j)
+    material_gamma_tilde_left = jnp.array(((0, minusElement),(plussElement, 0)))*jnp.exp(-phaseL*1j)
 
-    MaterialGammaRight = jnp.array(((0, plussElement),(minusElement, 0)))*jnp.exp(phaseR*1j)
-    MaterialGammaTildeRight = jnp.array(((0, minusElement),(plussElement, 0)))*jnp.exp(-phaseR*1j)
+    material_gamma_right = jnp.array(((0, plussElement),(minusElement, 0)))*jnp.exp(phaseR*1j)
+    material_gamma_tilde_right = jnp.array(((0, minusElement),(plussElement, 0)))*jnp.exp(-phaseR*1j)
     
-    return MaterialGammaLeft, MaterialGammaTildeLeft, MaterialGammaRight, MaterialGammaTildeRight
+    return material_gamma_left, material_gamma_tilde_left, material_gamma_right, material_gamma_tilde_right
 
 @jax.jit
 def calc_boundary_superconduct_metals(v_left,v_right, eps, delta, zeta, l, phiL, phiR):
-    gm_left, gm_left_t, omg_left, omg_left_t = pack_matrices(v_left)
-    gm_right, gm_right_t, omg_right, omg_right_t = pack_matrices(v_right)
+    'Beregning av grensebetingelser for ikke-null riccati-matriser'
+    gamma_left, gamma_left_tilde, omega_left, omega_left_tilde = convert_vector_to_matrices(v_left)
+    gamma_right, gamma_right_tilde, omega_right, omega_right_tilde = convert_vector_to_matrices(v_right)
 
-    mat_gamma_left, mat_gamma_t_left, mat_gamma_right, mat_gamma_t_right = fetch_nonzero_riccati(eps, delta, phiL, phiR)
+    material_gamma_left, material_gamma_left_tilde, material_gamma_right, material_gamma_right_tilde = fetch_nonzero_riccati(eps, delta, phiL, phiR)
 
-    N_L = calc_N(mat_gamma_left, mat_gamma_t_left)
-    N_L_t = calc_N_t(mat_gamma_left, mat_gamma_t_left)
+    N_left = calc_N(material_gamma_left, material_gamma_left_tilde)
+    N_left_tilde = calc_N_tilde(material_gamma_left, material_gamma_left_tilde)
 
-    N_R = calc_N(mat_gamma_right, mat_gamma_t_right)
-    N_R_t = calc_N_t(mat_gamma_right, mat_gamma_t_right)
+    N_right = calc_N(material_gamma_right, material_gamma_right_tilde)
+    N_right_tilde = calc_N_tilde(material_gamma_right, material_gamma_right_tilde)
 
-    eq13 = omg_left + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_left @ mat_gamma_t_left), N_L, mat_gamma_left -gm_left)
-    eq14 = omg_left_t + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_left_t @ mat_gamma_left), N_L_t, mat_gamma_t_left -gm_left_t)
+    eq13 = omega_left + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gamma_left @ material_gamma_left_tilde), N_left, material_gamma_left -gamma_left)
+    eq14 = omega_left_tilde + jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gamma_left_tilde @ material_gamma_left), N_left_tilde, material_gamma_left_tilde -gamma_left_tilde)
 
-    eq15 = omg_right - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right @ mat_gamma_t_right), N_R, mat_gamma_right -gm_right)
-    eq16 = omg_right_t - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gm_right_t @ mat_gamma_right), N_R_t, mat_gamma_t_right -gm_right_t)
+    eq15 = omega_right - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gamma_right @ material_gamma_right_tilde), N_right, material_gamma_right -gamma_right)
+    eq16 = omega_right_tilde - jnp.einsum('ij,jk,kl', 1/(zeta*l) * (jnp.identity(2) - gamma_right_tilde @ material_gamma_right), N_right_tilde, material_gamma_right_tilde -gamma_right_tilde)
 
-    final_v = flatten_matrices(eq13, eq14, eq15, eq16)
+    final_v = convert_matrices_to_vector(eq13, eq14, eq15, eq16)
     return final_v
 
 @jax.jit
-def CalculateGreensFunction(sol):
+def CalculateGreensFunction(solution):
 
-    gamma, gammaTilde, omega, omegaTilde = pack_matrices(sol)
+    gamma, gamma_tilde, omega, omega_tilde = convert_vector_to_matrices(solution)
 
-    N = calc_N(gamma, gammaTilde)
-    NTilde = calc_N_t(gamma, gammaTilde)
+    N = calc_N(gamma, gamma_tilde)
+    N_tilde = calc_N_tilde(gamma, gamma_tilde)
 
     topLeft = 2*N - jnp.identity(2)
     topRight = 2*N @ gamma
-    bottomLeft = -2*NTilde @ gammaTilde
-    bottomRight = -2*NTilde + jnp.identity(2)
+    bottomLeft = -2*N_tilde @ gamma_tilde
+    bottomRight = -2*N_tilde + jnp.identity(2)
 
-    #greens = jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     greens = jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
     return greens
 
 
 @jax.jit
-def calc_dgreen(sol):
-    gamma, gammaTilde, omega, omegaTilde = pack_matrices(sol)
+def calculate_greens_function_derivative(solution):
+    gamma, gamma_tilde, omega, omega_tilde = convert_vector_to_matrices(solution)
 
-    N = calc_N(gamma, gammaTilde)
-    NTilde = calc_N_t(gamma, gammaTilde)
+    N = calc_N(gamma, gamma_tilde)
+    N_tilde = calc_N_tilde(gamma, gamma_tilde)
 
-    dN = jnp.einsum('ij,jk,kl', N, omega @ gammaTilde + gamma @ omegaTilde, N)
-    dNTilde = jnp.einsum('ij,jk,kl', NTilde, omegaTilde @ gamma + gammaTilde @ omega, NTilde)
+    N_derivative = jnp.einsum('ij,jk,kl', N, omega @ gamma_tilde + gamma @ omega_tilde, N)
+    N_tilde_derivative = jnp.einsum('ij,jk,kl', N_tilde, omega_tilde @ gamma + gamma_tilde @ omega, N_tilde)
 
-    topLeft = dN
-    topRight = N @ omega + dN @ gamma
-    bottomLeft = -NTilde @ omegaTilde - dNTilde @ gammaTilde
-    bottomRight = -dNTilde
+    topLeft = N_derivative
+    topRight = N @ omega + N_derivative @ gamma
+    bottomLeft = -N_tilde @ omega_tilde - N_tilde_derivative @ gamma_tilde
+    bottomRight = -N_tilde_derivative
 
     dgreens = 2 * jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
-    #dgreens = 2* jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     return dgreens
 
 @jax.jit
@@ -188,7 +189,7 @@ def CalculateDensityOfState(greensFunction):
     return density
 
 @jax.jit
-def find_current_single_point(greensFunction, dgreensFunction):
+def find_current_at_single_point(greensFunction, dgreensFunction):
     roHat3 = jnp.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
     current = jnp.real(jnp.einsum('ij, ji ->',  roHat3, greensFunction @ dgreensFunction - dgreensFunction @ greensFunction))
     return current
@@ -215,18 +216,18 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                                        phiL=phiL, phiR=phiR)
                 
                 
-                sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm, tol=1E-6)
-                y = sol["y"]
+                solution = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm, tol=1E-6)
+                y = solution["y"]
                 if all_positions:
                     greensFunctions = jax.vmap(CalculateGreensFunction, in_axes=1)(y)
-                    dgreensFunctions = jax.vmap(calc_dgreen, in_axes=1)(y)
-                    currents.append(jax.vmap(find_current_single_point, in_axes=(0,0))(greensFunctions, dgreensFunctions))
+                    dgreensFunctions = jax.vmap(calculate_greens_function_derivative, in_axes=1)(y)
+                    currents.append(jax.vmap(find_current_at_single_point, in_axes=(0,0))(greensFunctions, dgreensFunctions))
                     #print(f'All currents has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}.')
                 else:
-                    y_singlePoint = sol["y"][:, (xm//2)]  # X = l/2
+                    y_singlePoint = solution["y"][:, (xm//2)]  # X = l/2
                     greensFunction = CalculateGreensFunction(y_singlePoint)
-                    dgreensFunction = calc_dgreen(y_singlePoint)
-                    currents.append(find_current_single_point(greensFunction, dgreensFunction))
+                    dgreensFunction = calculate_greens_function_derivative(y_singlePoint)
+                    currents.append(find_current_at_single_point(greensFunction, dgreensFunction))
                     #print(f"Current at x=l/2 has been calculated for eps = {eps :.2f} | Length = {l :.2f} | PhiL = {phiL :.2f}")           
                 
     return x, jnp.array(currents)
