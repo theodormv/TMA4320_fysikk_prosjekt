@@ -205,7 +205,7 @@ def setRiccatiToTask2i(prb : SolveTools, phaseL = 0, phaseR = 0):
 def oppgave_2j():
 
     problem = SolveTools()
-    problem.dimlessEnergy = 2
+    problem.dimlessEnergy = 0.25
     problem.dimlessLength = 1
     problem.delta = 0.01
     problem.zeta = 3
@@ -216,12 +216,12 @@ def oppgave_2j():
     x = np.linspace(0, problem.dimlessLength, m)
     y = np.zeros((32,m))
 
-    sol = sp.integrate.solve_bvp(problem.CalculateMdimDelxVecLOOP, problem.calculateBoundaryConditions, x, y)
+    sol = sp.integrate.solve_bvp(problem.CalculateMdimDelxVecLOOP, problem.calculateBoundaryConditions, x, y, max_)
     greensFunctions = CalculateGreensFunctions(sol["y"])
     density = CalculateDensityOfStates(greensFunctions)
     plt.plot(x, density)
     plt.grid()
-    plt.savefig("./output/default_oppg_j.png")
+    plt.savefig("./output/eps_0_25_oppg_j.png")
     plt.show()
 
     return sol
@@ -312,11 +312,11 @@ def CalculateCurrentIntegrand(greens):
 
 
 def oppgave_2l():
-    
+    pass
 
 
 def oppgave_2():
-    oppgave_2h(SolveTools())
+    oppgave_2j()
 
 if __name__ == "__main__":
     oppgave_2()
