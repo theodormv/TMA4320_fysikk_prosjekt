@@ -176,7 +176,7 @@ def calc_dgreen(sol):
     bottomLeft = -NTilde @ omegaTilde - dNTilde @ gammaTilde
     bottomRight = -dNTilde
 
-    dgreens = jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
+    dgreens = 2 * jnp.block([[topLeft, topRight], [bottomLeft, bottomRight]])
     #dgreens = 2* jnp.concatenate ((jnp.concatenate((topLeft ,topRight), axis=1), jnp.concatenate((bottomLeft, bottomRight), axis = 1)), axis = 0)
     return dgreens
 
@@ -187,6 +187,12 @@ def CalculateDensityOfState(greensFunction):
     density = density.reshape(-1, 1)
     return density
 
+@jax.jit
+def find_current_single_point(greensFunction, dgreensFunction):
+    roHat3 = jnp.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
+    current = jnp.real(jnp.einsum('ij, ji ->',  roHat3, greensFunction @ dgreensFunction - dgreensFunction @ greensFunction))
+    return current
+
 def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False):
     epsN = len(epsilon)
     zeta = 3
@@ -194,7 +200,6 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
     l = 1
 
     currents = []
-    roHat3 = jnp.array(((1,0,0,0),(0,1,0,0),(0,0,-1,0),(0,0,0,-1)))
     xm = epsN
     x = jnp.linspace(0,l,xm)
     y = jnp.zeros((32,xm))
@@ -210,14 +215,8 @@ def calculate_currents(lengths, epsilon, phiLeft, phiRight, all_positions=False)
                                        phiL=phiL, phiR=phiR)
                 
                 
-                
                 sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm, tol=1E-6)
                 y = sol["y"]
-
-                @jax.jit
-                def find_current_single_point(greensFunction, dgreensFunction):
-                    current = jnp.real(jnp.einsum('ij, ji ->',  roHat3, greensFunction @ dgreensFunction - dgreensFunction @ greensFunction))
-                    return current
                 if all_positions:
                     greensFunctions = jax.vmap(CalculateGreensFunction, in_axes=1)(y)
                     dgreensFunctions = jax.vmap(calc_dgreen, in_axes=1)(y)

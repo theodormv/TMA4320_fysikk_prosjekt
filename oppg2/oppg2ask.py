@@ -171,4 +171,4 @@ def oppgave_2n():
     plt.grid()
     plt.savefig("./output/2n.png")
 
-oppgave_2k()
+oppgave_2n()
