@@ -2,7 +2,7 @@ from base_funcs import *
 import matplotlib.pyplot as plt
 
 #2g
-def oppg_2g():
+def oppgave_2g():
     epsilon = jnp.array([2,1,0])
     lengths = l = 1
     delta = 0.01
@@ -27,7 +27,7 @@ def oppg_2g():
 
 #2h
 def oppgave_2h():
-    x, densities = oppg_2g()
+    x, densities = oppgave_2g()
     for idx, density in enumerate(densities):
         plt.plot(x, density, label=f"$\\varepsilon = {idx}$")
     
@@ -73,24 +73,6 @@ def oppgave_2k():
     phiL = phiR = 0
     xm = 101
 
-    '''    fig = plt.figure()
-    ax = fig.add_subplot(1,3,j)
-    ax.grid()
-    ax.set_title(r"$l =$" + str(float(l)))
-    ax.set_xlabel("Energy")
-    ax.set_ylabel("DOS")
-    
-    ax.plot(epsilon, DOS)
-    
-    fig.suptitle(r"DOS at $x = \frac{l}{2}$")
-    
-
-    fig.tight_layout()
-    fig.savefig("./output/2k.png")
-    fig.show()DOS at $x = \frac{l}{2}$
-    '''
-
-
     y = jnp.zeros((32,xm))
     for l in lengths:
         greensFunctions = list()
@@ -101,12 +83,10 @@ def oppgave_2k():
                                        eps=eps, delta=delta, zeta=zeta, l=l,
                                        phiL=phiL, phiR=phiR)
 
-            sol = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm)
-            y = sol["y"]
-            solAtX_2 = sol["y"][:, ((xm+1)//2)]
-            greensFunctions.append(CalculateGreensFunction(solAtX_2))
-
-        
+            solution = sp.integrate.solve_bvp(partial_dvec, partial_boundary, x, y, max_nodes = xm)
+            y = solution["y"]
+            solutionAtX_2 = solution["y"][:, ((xm)//2)]
+            greensFunctions.append(CalculateGreensFunction(solutionAtX_2))
 
 
         greensFunctions = jnp.array(greensFunctions, dtype=jnp.complex128)
@@ -120,8 +100,6 @@ def oppgave_2k():
     plt.legend()
     plt.savefig("./output/2k.png")
     
-
-
 
 def oppgave_2l():
     epsilon_for_calculation = jnp.linspace(2,0,101)
@@ -139,6 +117,7 @@ def oppgave_2l():
     plt.title("Current integrand $j(x,\\varepsilon)$")
     plt.xlabel("Position")
     plt.ylabel("$j$")
+    plt.ylim(-1E-6, 1E-6)
     plt.legend()
     plt.savefig("./output/2l.png")
 
@@ -170,5 +149,3 @@ def oppgave_2n():
     plt.title("Current $I$ with varying phase difference")
     plt.grid()
     plt.savefig("./output/2n.png")
-
-oppgave_2n()
