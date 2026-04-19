@@ -47,7 +47,7 @@ def oppg_c():
     tol = 10**-7
     y_init = np.array([0.,2.])
     h0 = 0.001
-    x, y_1, y_2, h, h_tot, h, h_w_disc = RK(x_init, x_end, y_init, h0, tol, f, alpha)
+    x, y_1, y_2, h, h_w_disc = RK(x_init, x_end, y_init, h0, tol, f, alpha)
 
     
     plt.plot(x, y_1, label = 'y(x)')
@@ -72,7 +72,7 @@ def oppg_c():
     plt.legend()
     plt.show()
 
-
+oppg_c()
 
 
 def y_anal(x):
