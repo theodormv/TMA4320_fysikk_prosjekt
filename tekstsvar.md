@@ -1,7 +1,5 @@
 ## Oppgave 2
 
-Density of States will be abbreviated DoS
-Tilstandstetthet
 ### 2 a, b)
 Funnksjonene virker som de skal, vi satte opp et par matriser i $\mathbb{C}^{2x2}$ med unike elementer og satte dem som argumenter til $f : \mathbb{C}^{2x2} \rightarrow \mathbb{R}^8$ og verifisert at det som kom ut var på formen $\left[ a_1 ,a_2,a_3,a_4,b_1,b_2,b_3,b_4\right]$. Gjorde det samme med genrelle vektorer i $\mathbb{R}^8$ i oppgave B.
 
