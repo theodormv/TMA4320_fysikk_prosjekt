@@ -1,6 +1,6 @@
 #our stuff
 *.pdf
-*.png
+#*.png
 Scripts/
 share/
 
