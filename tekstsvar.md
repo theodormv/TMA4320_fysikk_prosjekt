@@ -25,7 +25,7 @@ Som vist i plottet er strøm-integranden lik null for alle energiene. Dersom man
 
 Nå som $\Delta\phi\neq0$ får vi som forventet en strøm i metallet, i motsetning til oppgave 2l. Dersom vi istedenfor energi plotter strømmen som funksjon av posisjon for fem utvalgte verdier av epsilon slik som i oppgave 2l ser vi likevel at strøm-integranden også her er konservert, ettersom den er konstant for alle x, dette oppfyller kravet $j(x,\varepsilon) = j(0,\varepsilon)$.
 
-**HER KAN DET GJØRES ET ARGUMENT FOR AT DEN ER KONSTANT MED MASSE-, LADNING- OG ENERGIBEVARING, ER DETTE NOE VI VIL HA MED?**
+At integrander en konservert gir mening gitt bevaringslovene. Fra energibevaring har vi at dersom et elektron går fra energinivå $\varepsilon_n$ til $\varepsilon_k$ må et annet elektron gjøre det motsatte for at energien skal bevares. Ladnings og masse bevaring tilsier at det ikke spontant kan oppstå nye elektroner, elektrostatikk tilsier da at dersom elektroner flyter fra et område vil det oppstå en positiv ladning og systemet vil dras mot likevekt. Dermed må integrandene være konstante.
 
 ## 2n
 
