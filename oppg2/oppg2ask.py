@@ -111,7 +111,7 @@ def oppgave_2l():
     x, current = calculate_currents(lengths, epsilon_for_calculation, phiLeft, phiRight, all_positions=True)
     current_plot_vals = current[plot_indices]
     for (idx, current) in enumerate(current_plot_vals):
-        plt.plot(x, current, label=f'$\\varepsilon = {epsilon_for_plotting[idx]}$')
+        plt.plot(x, current, label=f'$\\varepsilon = {epsilon_for_plotting[idx]}$', alpha=0.6)
     
     plt.grid()
     plt.title("Current integrand $j(x,\\varepsilon)$")
@@ -170,4 +170,4 @@ def oppgave_2n():
     plt.savefig("./output/2n.png")
 
 
-oppgave_2m()
+oppgave_2l()
