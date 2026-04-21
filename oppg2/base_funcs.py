@@ -31,6 +31,7 @@ def SplitVectors(m1):
     return m1.reshape(4, 8)
 
 
+#2c
 @jax.jit
 def convert_matrices_to_vector(m1, m2, m3, m4):
     matrix_list = [m1, m2, m3, m4]
@@ -38,7 +39,6 @@ def convert_matrices_to_vector(m1, m2, m3, m4):
     v = MergeVectors(real_vectors[0], real_vectors[1], real_vectors[2], real_vectors[3])
     return v
 
-#2c
 @jax.jit
 def convert_vector_to_matrices(v):
     real_vectors = SplitVectors(v)
@@ -83,7 +83,7 @@ def calc_dvec(x: jnp.array, vec : jnp.array, eps, delta):
 #2f
 @jax.jit
 def calc_boundary_normmetals(v_left,v_right, zeta, l):
-    'Beregning av forenklet grensebetingelser ettersom alle riccati-matrisene er null'
+    'Beregning av grensebetingelser for system av kun normale metaler, dvs alle ricatti-matriser er null'
     gamma_left, gamma_left_tilde, omega_left, omega_left_tilde = convert_vector_to_matrices(v_left)
     gamma_right, gamma_right_tilde, omega_right, omega_right_tilde = convert_vector_to_matrices(v_right)
 
